@@ -7,14 +7,15 @@ from threading import Thread
 import urllib.request
 import json
 
+# קריאה ישירה של הטוקן וה-CFX ID מהגדרות השרת של Railway
 TOKEN = os.environ.get("DISCORD_TOKEN")
 CFX_ID = os.environ.get("CFX_ID")
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# לינק Imgur קבוע, פתוח ויציב שעוקף את כל החסימות של דיסקורד ל-GIF
-BACKGROUND_GIF = "https://imgur.com"
+# 🎯 הקישור הרשמי והישיר ל-background.gif מתוך הגיטהאב שלך (raw.githubusercontent)
+BACKGROUND_GIF = "https://githubusercontent.com"
 
 # מזהי רולים וחדרים המעודכנים של השרת שלך
 GUILD_ID = 1499081999464267807  
@@ -118,7 +119,10 @@ async def setup_status(interaction: discord.Interaction):
 
 @tasks.loop(seconds=15)
 async def track_live_players():
+    # הגנה: אם המשתנה לא קיים ב-Railway, נציג נתון בסיסי ולא נקרוס
     if not CFX_ID:
+        activity = discord.Activity(type=discord.ActivityType.watching, name="1/64 (0)")
+        await bot.change_presence(activity=activity)
         return
 
     players_count = 0
@@ -134,11 +138,12 @@ async def track_live_players():
     except Exception:
         server_online = False
 
-    # תיקון הסטטוס: שימוש מדויק בפורמט WATCHING הנכון
+    # 1. עדכון הסטטוס לפרופיל הבוט (Watching)
     status_text = f"1/64 ({players_count})" if server_online else "שרת אופליין 🔴"
     activity = discord.Activity(type=discord.ActivityType.watching, name=status_text)
     await bot.change_presence(activity=activity)
 
+    # 2. עדכון אוטומטי של הודעת ה-Embed בחדר סטטוס-שרת
     if STATUS_MESSAGE_ID:
         try:
             channel = bot.get_channel(STATUS_CHANNEL_ID)

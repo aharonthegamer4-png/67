@@ -2,12 +2,16 @@ import os
 import discord
 from discord.ext import commands
 from discord import app_commands
-import asyncio
 from flask import Flask
 from threading import Thread
 
-# קריאה ישירה של הטוקן מהגדרות השרת של Railway
+# קריאה ישירה ובטוחה של הטוקן ממערכת השרת
 TOKEN = os.environ.get("DISCORD_TOKEN")
+
+# הגנה: אם השרת עדיין לא קורא את הטוקן, נדפיס אזהרה ברורה בלוג
+if not TOKEN:
+    print("❌ שגיאה חמורה: משתנה המערכת DISCORD_TOKEN ריק או לא נמצא ב-Railway!")
+    print("אנא ודא בלשונית Variables שהשם כתוב בדיוק כך, ללא רווחים.")
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
@@ -117,9 +121,10 @@ async def on_ready():
         print(f"Failed to sync slash commands: {e}")
 
 if __name__ == "__main__":
-    # הפעלת שרת האינטרנט בשרשור נפרד כדי שלא יתקע את דיסקורד
+    # הפעלת שרת האינטרנט בנתיב נפרד
     t = Thread(target=run_flask)
     t.start()
     
-    # הרצה חלקה וישירה של הבוט
-    bot.run(TOKEN)
+    # הרצת הבוט רק אם הטוקן קיים ומזוהה
+    if TOKEN:
+        bot.run(TOKEN)

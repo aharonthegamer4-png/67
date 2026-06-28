@@ -1,9 +1,10 @@
-from keep_alive import keep_alive
 import os
 import discord
 from discord.ext import commands
 from discord import app_commands
 import asyncio
+from flask import Flask
+from threading import Thread
 
 # קריאה ישירה של הטוקן מהגדרות השרת של Railway
 TOKEN = os.environ.get("DISCORD_TOKEN")
@@ -12,6 +13,18 @@ intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 BACKGROUND_GIF = "https://githubusercontent.com"
+
+# ==========================================
+# 🌐 שרת אינטרנט פנימי למניעת קריסה (Keep Alive)
+# ==========================================
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot is running 24/7! Developed by Aaharon The Gamer"
+
+def run_flask():
+    app.run(host='0.0.0.0', port=8080)
 
 # ==========================================
 # 🛡️ מערכת אימות (VERIFY) - כפתור ולוגיקה
@@ -103,11 +116,10 @@ async def on_ready():
     except Exception as e:
         print(f"Failed to sync slash commands: {e}")
 
-# הפעלה אסינכרונית חכמה שלא תוקעת את השרת
-async def start_bot():
-    keep_alive()  # מפעיל את שרת ה-Web ברקע
-    async with bot:
-        await bot.start(TOKEN)  # מפעיל את הבוט במקביל
-
 if __name__ == "__main__":
-    asyncio.run(start_bot())
+    # הפעלת שרת האינטרנט בשרשור נפרד כדי שלא יתקע את דיסקורד
+    t = Thread(target=run_flask)
+    t.start()
+    
+    # הרצה חלקה וישירה של הבוט
+    bot.run(TOKEN)

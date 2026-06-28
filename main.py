@@ -14,9 +14,6 @@ CFX_ID = os.environ.get("CFX_ID")
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# 🎯 הקישור הרשמי והישיר ל-background.gif מתוך הגיטהאב שלך (raw.githubusercontent)
-BACKGROUND_GIF = "https://githubusercontent.com"
-
 # מזהי רולים וחדרים המעודכנים של השרת שלך
 GUILD_ID = 1499081999464267807  
 VERIFY_ROLE_ID = 1514394547554226388
@@ -65,6 +62,12 @@ async def setup_verify(interaction: discord.Interaction):
     if not channel:
         return await interaction.response.send_message("שגיאה: חדר האימות לא נמצא.", ephemeral=True)
 
+    # יצירת קובץ מצורף מתוך התיקייה של הפרויקט בגיטהאב
+    if not os.path.exists("background.gif"):
+        return await interaction.response.send_message("שגיאה: קובץ background.gif לא נמצא בתיקייה הראשית ב-GitHub.", ephemeral=True)
+        
+    gif_file = discord.File("background.gif", filename="background.gif")
+
     embed = discord.Embed(
         title="🛡️ מערכת אימות הגנה - שרת 67",
         description=(
@@ -74,10 +77,11 @@ async def setup_verify(interaction: discord.Interaction):
         ),
         color=0x2f3136
     )
-    embed.set_image(url=BACKGROUND_GIF)
+    # טעינה בטוחה של ה-GIF מתוך הקובץ המצורף ישירות לשרתי דיסקורד
+    embed.set_image(url="attachment://background.gif")
     embed.set_footer(text="Developed by Aaharon The Gamer", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
 
-    await channel.send(embed=embed, view=VerifyButton())
+    await channel.send(file=gif_file, embed=embed, view=VerifyButton())
     await interaction.response.send_message("מערכת האימות הוצבה בהצלחה!", ephemeral=True)
 
 
@@ -101,25 +105,29 @@ async def setup_status(interaction: discord.Interaction):
     if not channel:
         return await interaction.response.send_message("שגיאה: חדר הסטטוס לא נמצא.", ephemeral=True)
 
+    if not os.path.exists("background.gif"):
+        return await interaction.response.send_message("שגיאה: קובץ background.gif לא נמצא.", ephemeral=True)
+        
+    gif_file = discord.File("background.gif", filename="background.gif")
+
     embed = discord.Embed(title="סטטוס שרת FiveM", color=0x2f3136)
     embed.add_field(name="שחקנים", value="🟢 בודק נתונים...", inline=True)
     embed.add_field(name="סטטוס", value="🟢 פעיל", inline=True)
     embed.add_field(name="חיבור מהיר", value="`cfx.re/join/xedygr`", inline=False)
-    embed.set_image(url=BACKGROUND_GIF)
+    embed.set_image(url="attachment://background.gif")
     embed.set_footer(text="Developed by Aaharon The Gamer")
 
-    msg = await channel.send(embed=embed, view=StatusView())
+    msg = await channel.send(file=gif_file, embed=embed, view=StatusView())
     STATUS_MESSAGE_ID = msg.id
     await interaction.response.send_message("הודעת הסטטוס נוצרה! הבוט יעדכן אותה אוטומטית מעכשיו.", ephemeral=True)
 
 
 # ==========================================
-# 📊 משימה אוטומטית ברקע - פנייה ישירה ל-CFX
+# 📊 משימה אוטומטית ברקע - פנייה ישירה ל-CFX Master List
 # ==========================================
 
 @tasks.loop(seconds=15)
 async def track_live_players():
-    # הגנה: אם המשתנה לא קיים ב-Railway, נציג נתון בסיסי ולא נקרוס
     if not CFX_ID:
         activity = discord.Activity(type=discord.ActivityType.watching, name="1/64 (0)")
         await bot.change_presence(activity=activity)
@@ -129,8 +137,9 @@ async def track_live_players():
     server_online = False
 
     try:
-        url = f"https://cfx-services.net{CFX_ID}"
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        # 🎯 מעבר לכתובת ה-API של ה-Master List שעוקפת את הגנות Cloudflare לבוטים
+        url = f"https://fivem.net{CFX_ID}"
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
         with urllib.request.urlopen(req, timeout=5) as response:
             data = json.loads(response.read().decode())
             players_count = data['Data']['clients']
@@ -138,7 +147,7 @@ async def track_live_players():
     except Exception:
         server_online = False
 
-    # 1. עדכון הסטטוס לפרופיל הבוט (Watching)
+    # 1. עדכון הסטטוס לפרופיל הבוט (Watching) בדיוק בפורמט שרצית
     status_text = f"1/64 ({players_count})" if server_online else "שרת אופליין 🔴"
     activity = discord.Activity(type=discord.ActivityType.watching, name=status_text)
     await bot.change_presence(activity=activity)
@@ -157,7 +166,9 @@ async def track_live_players():
                 embed.add_field(name="שחקנים", value=players_val, inline=True)
                 embed.add_field(name="סטטוס", value=status_val, inline=True)
                 embed.add_field(name="חיבור מהיר", value="`cfx.re/join/xedygr`", inline=False)
-                embed.set_image(url=BACKGROUND_GIF)
+                
+                # בגלל שהקובץ כבר הועלה להודעה, המלבן יישאר מעודכן בתוך ה-Embed
+                embed.set_image(url="attachment://background.gif")
                 embed.set_footer(text="Developed by Aaharon The Gamer")
                 
                 await msg.edit(embed=embed, view=StatusView())
@@ -184,12 +195,17 @@ async def on_member_join(member: discord.Member):
         ),
         color=0x7289da
     )
-    embed.set_image(url=BACKGROUND_GIF)
+    if os.path.exists("background.gif"):
+        embed.set_image(url="attachment://background.gif")
     if member.avatar:
         embed.set_thumbnail(url=member.avatar.url)
     embed.set_footer(text="Developed by Aaharon The Gamer", icon_url=member.guild.icon.url if member.guild.icon else None)
 
-    await channel.send(content=f"היי {member.mention}, ברוך הבא! ✨", embed=embed)
+    if os.path.exists("background.gif"):
+        gif_file = discord.File("background.gif", filename="background.gif")
+        await channel.send(file=gif_file, embed=embed)
+    else:
+        await channel.send(embed=embed)
 
 
 # ==========================================

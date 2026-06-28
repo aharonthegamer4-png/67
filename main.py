@@ -3,6 +3,7 @@ import os
 import discord
 from discord.ext import commands
 from discord import app_commands
+import asyncio
 
 # קריאה ישירה של הטוקן מהגדרות השרת של Railway
 TOKEN = os.environ.get("DISCORD_TOKEN")
@@ -92,7 +93,7 @@ async def on_member_join(member: discord.Member):
 
 @bot.event
 async def on_ready():
-    print(f"Logged in as {bot.user.name} (ID: {bot.user.id})")
+    print(f"✅ Logged in as {bot.user.name} (ID: {bot.user.id})")
     print("------")
     bot.add_view(VerifyButton())
     
@@ -102,5 +103,11 @@ async def on_ready():
     except Exception as e:
         print(f"Failed to sync slash commands: {e}")
 
-keep_alive()
-bot.run(TOKEN)
+# הפעלה אסינכרונית חכמה שלא תוקעת את השרת
+async def start_bot():
+    keep_alive()  # מפעיל את שרת ה-Web ברקע
+    async with bot:
+        await bot.start(TOKEN)  # מפעיל את הבוט במקביל
+
+if __name__ == "__main__":
+    asyncio.run(start_bot())

@@ -1,3 +1,4 @@
+from keep_alive import keep_alive
 import os
 import discord
 from discord.ext import commands
@@ -114,6 +115,9 @@ async def on_ready():
         print(f"Synced {len(synced)} slash command(s) successfully.")
     except Exception as e:
         print(f"Failed to sync slash commands: {e}")
+
+# הפעלת שרת שומר החיים 24/7
+keep_alive()
 
 # הרצת הבוט עם הטוקן מקובץ ה-.env
 bot.run(TOKEN)

@@ -7,23 +7,23 @@ from threading import Thread
 import urllib.request
 import json
 
-# קריאת משתני המערכת מ-Railway
+# קריאה ישירה של הטוקן וה-CFX ID מהגדרות השרת של Railway
 TOKEN = os.environ.get("DISCORD_TOKEN")
 CFX_ID = os.environ.get("CFX_ID")
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# הלינק הישיר ל-GIF שלך בגיטהאב שיופיע ברקע של ההודעות
-BACKGROUND_GIF = "https://githubusercontent.com"
+# כתובת GIF מאובטחת ויציבה שעוקפת את החסימות של דיסקורד
+BACKGROUND_GIF = "https://postimg.cc"
 
-# מזהי רולים וחדרים מתוך השרת שלך
+# מזהי רולים וחדרים המעודכנים של השרת שלך מהתמונה
+GUILD_ID = 1499081999464267807  
 VERIFY_ROLE_ID = 1514394547554226388
 STATUS_CHANNEL_ID = 1520889866496249906
 VERIFY_CHANNEL_ID = 1514409408489328801
 WELCOME_CHANNEL_ID = 1514409410661842944
 
-# מזהה ההודעה של הסטטוס למניעת הצפות של הצ'אט
 STATUS_MESSAGE_ID = None
 
 # ==========================================
@@ -48,7 +48,6 @@ class VerifyButton(discord.ui.View):
 
     @discord.ui.button(label="להתחלת אימות / Verify", style=discord.ButtonStyle.success, emoji="🛡️", custom_id="verify_btn_67")
     async def verify(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # מציאת הרול לפי ה-ID המדויק שסיפקת
         role = interaction.guild.get_role(VERIFY_ROLE_ID)
         if not role:
             return await interaction.response.send_message("שגיאה: רול האימות לא נמצא בשרת.", ephemeral=True)
@@ -118,7 +117,7 @@ async def setup_status(interaction: discord.Interaction):
 # 📊 משימה אוטומטית ברקע - פנייה ישירה ל-CFX
 # ==========================================
 
-@tasks.loop(seconds=30)
+@tasks.loop(seconds=15)
 async def track_live_players():
     if not CFX_ID:
         return
@@ -126,11 +125,10 @@ async def track_live_players():
     players_count = 0
     server_online = False
 
-    # פנייה לשרת הרישום הרשמי של FiveM לקבלת נתוני השחקנים בלייב
     try:
         url = f"https://cfx-services.net{CFX_ID}"
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=7) as response:
+        with urllib.request.urlopen(req, timeout=5) as response:
             data = json.loads(response.read().decode())
             players_count = data['Data']['clients']
             server_online = True
@@ -200,25 +198,23 @@ async def on_ready():
     print(f"✅ Logged in as {bot.user.name} (ID: {bot.user.id})")
     print("------")
     
-    # שמירה על כפתורי הבוט פעילים גם אחרי קריסה או הפעלה מחדש
     bot.add_view(VerifyButton())
     bot.add_view(StatusView())
     
-    # התחלת לולאת המעקב האוטומטית ברקע אחרי השרת
     if not track_live_players.is_running():
         track_live_players.start()
     
     try:
-        await bot.tree.sync()
-        print("Synced slash commands successfully.")
+        # פתרון החסימה: העתקה וסנכרון מיידי וכפוי ישירות לתוך השרת שלך ברגע ההדלקה!
+        guild_obj = discord.Object(id=GUILD_ID)
+        bot.tree.copy_global_to(guild=guild_obj)
+        await bot.tree.sync(guild=guild_obj)
+        print(f"🎯 Synced slash commands for guild {GUILD_ID} instantly!")
     except Exception as e:
         print(f"Failed to sync slash commands: {e}")
 
 if __name__ == "__main__":
-    # הרצת השרת המשני של פלאסק
     t = Thread(target=run_flask)
     t.start()
-    
-    # הרצת הבוט הראשי
     if TOKEN:
         bot.run(TOKEN)

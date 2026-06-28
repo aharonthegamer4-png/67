@@ -7,17 +7,16 @@ from threading import Thread
 import urllib.request
 import json
 
-# קריאה ישירה של הטוקן וה-CFX ID מהגדרות השרת של Railway
 TOKEN = os.environ.get("DISCORD_TOKEN")
 CFX_ID = os.environ.get("CFX_ID")
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# כתובת GIF מאובטחת ויציבה שעוקפת את החסימות של דיסקורד
-BACKGROUND_GIF = "https://postimg.cc"
+# לינק Imgur קבוע, פתוח ויציב שעוקף את כל החסימות של דיסקורד ל-GIF
+BACKGROUND_GIF = "https://imgur.com"
 
-# מזהי רולים וחדרים המעודכנים של השרת שלך מהתמונה
+# מזהי רולים וחדרים המעודכנים של השרת שלך
 GUILD_ID = 1499081999464267807  
 VERIFY_ROLE_ID = 1514394547554226388
 STATUS_CHANNEL_ID = 1520889866496249906
@@ -39,7 +38,7 @@ def run_flask():
     app.run(host='0.0.0.0', port=8080)
 
 # ==========================================
-# 🛡️ מערכת אימות (VERIFY) - כפתור ולוגיקה
+# 🛡️ מערכת אימות (VERIFY)
 # ==========================================
 
 class VerifyButton(discord.ui.View):
@@ -135,12 +134,11 @@ async def track_live_players():
     except Exception:
         server_online = False
 
-    # 1. עדכון הסטטוס של הבוט עצמו (Watching)
+    # תיקון הסטטוס: שימוש מדויק בפורמט WATCHING הנכון
     status_text = f"1/64 ({players_count})" if server_online else "שרת אופליין 🔴"
     activity = discord.Activity(type=discord.ActivityType.watching, name=status_text)
     await bot.change_presence(activity=activity)
 
-    # 2. עדכון אוטומטי של הודעת ה-Embed בחדר סטטוס-שרת
     if STATUS_MESSAGE_ID:
         try:
             channel = bot.get_channel(STATUS_CHANNEL_ID)
@@ -205,11 +203,10 @@ async def on_ready():
         track_live_players.start()
     
     try:
-        # פתרון החסימה: העתקה וסנכרון מיידי וכפוי ישירות לתוך השרת שלך ברגע ההדלקה!
         guild_obj = discord.Object(id=GUILD_ID)
         bot.tree.copy_global_to(guild=guild_obj)
         await bot.tree.sync(guild=guild_obj)
-        print(f"🎯 Synced slash commands for guild {GUILD_ID} instantly!")
+        print(f"🎯 Synced slash commands successfully.")
     except Exception as e:
         print(f"Failed to sync slash commands: {e}")
 

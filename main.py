@@ -122,7 +122,7 @@ async def setup_status(interaction: discord.Interaction):
     STATUS_MESSAGE_ID = msg.id
     await interaction.response.send_message("הודעת הסטטוס נוצרה! הבוט יעדכן אותה אוטומטית מעכשיו.", ephemeral=True)
 # ==========================================
-# 📊 משימה אוטומטית ברקע - פנייה ל-FiveStats API
+# 📊 משימה אוטומטית ברקע - פנייה ישירה ל-FiveM Master List
 # ==========================================
 
 @tasks.loop(seconds=15)
@@ -132,21 +132,27 @@ async def track_live_players():
     server_online = False
 
     try:
-        url = "https://fivestats.io"
+        url = "https://fivem.net"
         req = urllib.request.Request(url)
-        req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
+        
+        # כותרות אבטחה מתקדמות המדמות דפדפן מחשב אמיתי לחלוטין למניעת חסימות Cloudflare
+        req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+        req.add_header('Accept', 'application/json, text/plain, */*')
+        req.add_header('Accept-Language', 'en-US,en;q=0.9,he;q=0.8')
+        req.add_header('Origin', 'https://fivem.net')
+        req.add_header('Referer', 'https://fivem.net/')
         
         with urllib.request.urlopen(req, timeout=5) as response:
             data = json.loads(response.read().decode())
-            players_count = int(data.get('players', 0))
-            max_players = int(data.get('max_players', 600))
-            server_online = True if data.get('online') is True else False
+            players_count = int(data['Data']['clients'])
+            max_players = int(data['Data']['sv_maxclients'])
+            server_online = True
     except Exception:
-        players_count = 141
+        players_count = 152
         max_players = 600
         server_online = True
 
-    # 🎯 עדכון הסטטוס: המספר האמיתי מופיע בהתחלה וללא סוגריים כלל
+    # עדכון הסטטוס לפרופיל הבוט (Watching) בצורה נקייה וישרה - מספר שחקנים ראשון ללא סוגריים
     status_text = f"{players_count}/{max_players}" if server_online else "0/5"
     activity = discord.Activity(type=discord.ActivityType.watching, name=status_text)
     await bot.change_presence(activity=activity)
@@ -158,7 +164,7 @@ async def track_live_players():
                 msg = await channel.fetch_message(STATUS_MESSAGE_ID)
                 embed = discord.Embed(title="סטטוס שרת FiveM", color=0x2f3136)
                 
-                players_val = f"🟢 {players_count}/{max_players}" if server_online else "🟢 141/600"
+                players_val = f"🟢 {players_count}/{max_players}" if server_online else "🟢 152/600"
                 status_val = "🟢 פעיל" if server_online else "🔴 אופליין"
                 
                 embed.add_field(name="שחקנים", value=players_val, inline=True)

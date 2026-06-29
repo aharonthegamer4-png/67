@@ -10,6 +10,9 @@ import json
 # קריאה ישירה של הטוקן מהגדרות השרת של Railway
 TOKEN = os.environ.get("DISCORD_TOKEN")
 
+# הגדרת ה-CFX ID של גיים זון ישירות כברירת מחדל לניסוי
+CFX_ID = os.environ.get("CFX_ID", "am35ok")
+
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
@@ -110,7 +113,7 @@ async def setup_status(interaction: discord.Interaction):
     embed = discord.Embed(title="סטטוס שרת FiveM", color=0x2f3136)
     embed.add_field(name="שחקנים", value="🟢 בודק נתונים...", inline=True)
     embed.add_field(name="סטטוס", value="🟢 פעיל", inline=True)
-    embed.add_field(name="חיבור מהיר", value="`cfx.re/join/xedygr`", inline=False)
+    embed.add_field(name="חיבור מהיר", value="`cfx.re/join/am35ok`", inline=False)
     embed.set_image(url="attachment://background.gif")
     embed.set_footer(text="Developed by Aaharon The Gamer")
 
@@ -120,32 +123,31 @@ async def setup_status(interaction: discord.Interaction):
 
 
 # ==========================================
-# 📊 משימה אוטומטית ברקע - קריאת נתונים אמיתיים
+# 📊 משימה אוטומטית ברקע - מעקב אחרי גיים זון
 # ==========================================
 
 @tasks.loop(seconds=15)
 async def track_live_players():
     players_count = 0
-    max_players = 5  # ברירת מחדל בסיסית למקרה של תקלה זמנית
+    max_players = 600
     server_online = False
 
     try:
-        url = "https://fivem.net"
+        url = f"https://fivem.net{CFX_ID}"
         req = urllib.request.Request(url)
         req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
         
         with urllib.request.urlopen(req, timeout=5) as response:
             data = json.loads(response.read().decode())
-            # 🎯 משיכת נתונים אמיתיים לחלוטין מתוך השרת של FiveM
             players_count = int(data['Data']['clients'])
-            max_players = int(data['Data']['sv_maxclients'])  # מושך אוטומטית את ה-5 (או הדרגה האמיתית שלכם)
+            max_players = int(data['Data']['sv_maxclients'])
             server_online = True
     except Exception:
         players_count = 0
-        max_players = 5
+        max_players = 600
         server_online = False
 
-    # 1. עדכון הסטטוס לפרופיל הבוט (Watching) עם המספר האמיתי
+    # 1. עדכון הסטטוס לפרופיל הבוט (Watching)
     status_text = f"1/{max_players} ({players_count})" if server_online else "שרת בבדיקה 🟢"
     activity = discord.Activity(type=discord.ActivityType.watching, name=status_text)
     await bot.change_presence(activity=activity)
@@ -158,13 +160,12 @@ async def track_live_players():
                 msg = await channel.fetch_message(STATUS_MESSAGE_ID)
                 embed = discord.Embed(title="סטטוס שרת FiveM", color=0x2f3136)
                 
-                # 🎯 הצגת המספרים האמיתיים בלייב: 0/5
-                players_val = f"🟢 {players_count}/{max_players}" if server_online else "🟢 0/5"
-                status_val = "🟢 פעיל"
+                players_val = f"🟢 {players_count}/{max_players}" if server_online else "🟢 טוען נתונים..."
+                status_val = "🟢 פעיל" if server_online else "🔴 תחזוקה"
                 
                 embed.add_field(name="שחקנים", value=players_val, inline=True)
                 embed.add_field(name="סטטוס", value=status_val, inline=True)
-                embed.add_field(name="חיבור מהיר", value="`cfx.re/join/xedygr`", inline=False)
+                embed.add_field(name="חיבור מהיר", value="`cfx.re/join/am35ok`", inline=False)
                 embed.set_image(url="attachment://background.gif")
                 embed.set_footer(text="Developed by Aaharon The Gamer")
                 

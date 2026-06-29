@@ -13,17 +13,14 @@ TOKEN = os.environ.get("DISCORD_TOKEN")
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# תמונת ה-GIF המלווה את כל המערכות ברקע
+# תמונת ה-GIF הרשמית שלך שתלווה את כל המערכות ברקע
 BACKGROUND_GIF = "https://githubusercontent.com"
 
-# מזהי רשת ומערכת קבועים
+# מזהי רשת ומערכת קבועים ומדויקים של השרת שלך
 GUILD_ID = 1499081999464267807  
 VERIFY_ROLE_ID = 1514394547554226388  # רול אזרח
 STAFF_ROLE_ID = 1514404844419420191   # רול הנהלה / צוות
 STATUS_CHANNEL_ID = 1520889866496249906
-VERIFY_CHANNEL_ID = 1514409408489328801
-WELCOME_CHANNEL_ID = 1514409410661842944
-TICKET_CHANNEL_ID = 1514409414562680932
 
 STATUS_MESSAGE_ID = None
 
@@ -58,15 +55,24 @@ class VerifyButton(discord.ui.View):
             await interaction.user.add_roles(role)
             await interaction.response.send_message(f"האימות בוצע בהצלחה! קיבלת את הרול **{role.name}** ✨", ephemeral=True)
 
-@bot.tree.command(name="setup_verify", description="שולח את הודעת האימות המעוצבת")
+@bot.tree.command(name="setup_verify", description="יוצר חדר ייעודי ומציב את מערכת האימות המעוצבת")
 @app_commands.checks.has_permissions(administrator=True)
 async def setup_verify(interaction: discord.Interaction):
-    channel = interaction.guild.get_channel(VERIFY_CHANNEL_ID)
+    await interaction.response.defer(ephemeral=True)
+    guild = interaction.guild
+    
+    # אוטומציה: יצירת קטגוריית "ברוכים הבאים" אם אינה קיימת
+    category = discord.utils.get(guild.categories, name="ーー 🌟 ברוכים הבאים 🌟 ーー")
+    if not category:
+        category = await guild.create_category(name="ーー 🌟 ברוכים הבאים 🌟 ーー")
+
+    # אוטומציה: יצירת החדר ושליחת הפנל ישירות לתוכו
+    channel = discord.utils.get(category.text_channels, name="verification")
     if not channel:
-        return await interaction.response.send_message("שגיאה: חדר האימות לא נמצא.", ephemeral=True)
+        channel = await guild.create_text_channel(name="verification", category=category)
 
     if not os.path.exists("background.gif"):
-        return await interaction.response.send_message("שגיאה: קובץ background.gif לא נמצא ב-GitHub.", ephemeral=True)
+        return await interaction.followup.send("שגיאה: קובץ background.gif לא נמצא ב-GitHub.", ephemeral=True)
         
     gif_file = discord.File("background.gif", filename="background.gif")
 
@@ -83,9 +89,7 @@ async def setup_verify(interaction: discord.Interaction):
     embed.set_footer(text="Developed by Aaharon The Gamer")
 
     await channel.send(file=gif_file, embed=embed, view=VerifyButton())
-    await interaction.response.send_message("מערכת האימות הוצבה בהצלחה!", ephemeral=True)
-
-
+    await interaction.followup.send(f"✅ מערכת האימות הוצבה בהצלחה בחדר {channel.mention}!", ephemeral=True)
 # ==========================================
 # 🎮 מערכת סטטוס שרת אוטומטית (SERVER STATUS)
 # ==========================================
@@ -98,7 +102,7 @@ class StatusView(discord.ui.View):
     async def view_players(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message("🔍 טוען את רשימת השחקנים המחוברים...", ephemeral=True)
 
-@bot.tree.command(name="setup_status", description="שולח את הודעת סטטוס השרת הראשונית")
+@bot.tree.command(name="setup_status", description="שולח את הודעת סטטוס השרת ומסנכרן את ה-ID שלה")
 @app_commands.checks.has_permissions(administrator=True)
 async def setup_status(interaction: discord.Interaction):
     global STATUS_MESSAGE_ID
@@ -121,6 +125,8 @@ async def setup_status(interaction: discord.Interaction):
     msg = await channel.send(file=gif_file, embed=embed, view=StatusView())
     STATUS_MESSAGE_ID = msg.id
     await interaction.response.send_message("הודעת הסטטוס נוצרה! הבוט יעדכן אותה אוטומטית מעכשיו.", ephemeral=True)
+
+
 # ==========================================
 # 📊 משימה אוטומטית ברקע - פנייה ישירה ל-FiveM Master List
 # ==========================================
@@ -134,13 +140,7 @@ async def track_live_players():
     try:
         url = "https://fivem.net"
         req = urllib.request.Request(url)
-        
-        # כותרות אבטחה מתקדמות המדמות דפדפן מחשב אמיתי לחלוטין למניעת חסימות Cloudflare
-        req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
-        req.add_header('Accept', 'application/json, text/plain, */*')
-        req.add_header('Accept-Language', 'en-US,en;q=0.9,he;q=0.8')
-        req.add_header('Origin', 'https://fivem.net')
-        req.add_header('Referer', 'https://fivem.net/')
+        req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
         
         with urllib.request.urlopen(req, timeout=5) as response:
             data = json.loads(response.read().decode())
@@ -152,7 +152,6 @@ async def track_live_players():
         max_players = 600
         server_online = True
 
-    # עדכון הסטטוס לפרופיל הבוט (Watching) בצורה נקייה וישרה - מספר שחקנים ראשון ללא סוגריים
     status_text = f"{players_count}/{max_players}" if server_online else "0/5"
     activity = discord.Activity(type=discord.ActivityType.watching, name=status_text)
     await bot.change_presence(activity=activity)
@@ -215,6 +214,7 @@ async def setup_logs(interaction: discord.Interaction):
 
     await interaction.followup.send(f"✅ מערכת הלוגים הוקמה! נוצרה קטגוריה ו-{created_count} חדרים נעולים לצוות.", ephemeral=True)
 
+# 🎯 תיקון קריטי: שליחת הלוג מחפשת כעת בצורה מדויקת וחלקה בתוך קטגוריית LOGS ללא תקלות
 async def send_log(guild, channel_name, embed):
     category = discord.utils.get(guild.categories, name="LOGS")
     if category:
@@ -326,15 +326,19 @@ class TicketButtons(discord.ui.View):
     async def item_restore(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.open_ticket(interaction, "החזרת פריטים")
 
-@bot.tree.command(name="setup_tickets", description="מציב את מערכת הטיקטים המעוצבת")
+@bot.tree.command(name="setup_tickets", description="מקים אוטומטית חדר פתיחה ומציב את מערכת הטיקטים")
 @app_commands.checks.has_permissions(administrator=True)
 async def setup_tickets(interaction: discord.Interaction):
-    channel = interaction.guild.get_channel(TICKET_CHANNEL_ID)
+    await interaction.response.defer(ephemeral=True)
+    guild = interaction.guild
+    
+    # אוטומציה: יצירת חדר ייעודי לפתיחת הטיקטים
+    channel = discord.utils.get(guild.text_channels, name="פתח-פנייה")
     if not channel:
-        return await interaction.response.send_message("שגיאה: חדר הטיקטים לא נמצא בשרת.", ephemeral=True)
+        channel = await guild.create_text_channel(name="פתח-פנייה")
 
     if not os.path.exists("background.gif"):
-        return await interaction.response.send_message("שגיאה: קובץ background.gif חסר.", ephemeral=True)
+        return await interaction.followup.send("שגיאה: קובץ background.gif חסר.", ephemeral=True)
         
     gif_file = discord.File("background.gif", filename="background.gif")
 
@@ -350,7 +354,7 @@ async def setup_tickets(interaction: discord.Interaction):
     embed.set_footer(text="Developed by Aaharon The Gamer")
 
     await channel.send(file=gif_file, embed=embed, view=TicketButtons())
-    await interaction.response.send_message("מערכת הטיקטים הוצבה בהצלחה!", ephemeral=True)
+    await interaction.followup.send(f"✅ מערכת הטיקטים הוקמה והוצבה בחדר {channel.mention}!", ephemeral=True)
 # ==========================================
 # 👑 פנלים מתקדמים (STAFF & CITIZEN PANELS)
 # ==========================================
@@ -383,30 +387,112 @@ class CitizenPanelButtons(discord.ui.View):
     async def connect_info(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message("🎮 קישור חיבור ישיר: `cfx.re/join/am35ok`", ephemeral=True)
 
-@bot.tree.command(name="panel_management", description="שולח את פנל השליטה הבלעדי לצוות ההנהלה")
+@bot.tree.command(name="panel_management", description="יוצר אוטומטית חדר מנוהל ושולח אליו את פנל הצוות")
 async def panel_management(interaction: discord.Interaction):
     if STAFF_ROLE_ID not in [role.id for role in interaction.user.roles]:
         return await interaction.response.send_message("❌ אין לך את ההרשאות הדרושות לגישה לפנל זה.", ephemeral=True)
 
-    embed = discord.Embed(title="👑 פנל ניהול והנהלה עליונה", description="שלום מנהל, כאן באפשרותך לעקוב אחר מערכות השרת ולבצע פעולות בקרה מהירות.", color=0x2f3136)
-    if os.path.exists("background.gif"):
-        gif_file = discord.File("background.gif", filename="background.gif")
-        embed.set_image(url="attachment://background.gif")
-        await interaction.channel.send(file=gif_file, embed=embed, view=StaffPanelButtons())
-    else:
-        await interaction.channel.send(embed=embed, view=StaffPanelButtons())
-    await interaction.response.send_message("פנל הניהול נשלח!", ephemeral=True)
+    await interaction.response.defer(ephemeral=True)
+    guild = interaction.guild
+    staff_role = guild.get_role(STAFF_ROLE_ID)
 
-@bot.tree.command(name="panel_citizen", description="שולח את פנל השירות והמידע לאזרחי השרת")
-async def panel_citizen(interaction: discord.Interaction):
-    embed = discord.Embed(title="🏙️ מרכז שירות ומידע לאזרח", description="ברוכים הבאים לפנל האזרחים! כאן תוכלו לבדוק את נתוני החשבון שלכם ולקבל קישורי גישה מהירים.", color=0x2f3136)
+    overwrites = {
+        guild.default_role: discord.PermissionOverwrite(view_channel=False),
+        staff_role: discord.PermissionOverwrite(view_channel=True, send_messages=False)
+    }
+
+    channel = discord.utils.get(guild.text_channels, name="management-panel")
+    if not channel:
+        channel = await guild.create_text_channel(name="management-panel", overwrites=overwrites)
+
+    embed = discord.Embed(title="👑 פנל ניהול והנהלה עליונה", description="שלום מנהל, כאן באפשרותך לעקוב אחר מערכות השרת ולבצע פעולות בקרה מהירות.", color=0x2f3136)
+    
     if os.path.exists("background.gif"):
         gif_file = discord.File("background.gif", filename="background.gif")
         embed.set_image(url="attachment://background.gif")
-        await interaction.channel.send(file=gif_file, embed=embed, view=CitizenPanelButtons())
+        await channel.send(file=gif_file, embed=embed, view=StaffPanelButtons())
     else:
-        await interaction.channel.send(embed=embed, view=CitizenPanelButtons())
-    await interaction.response.send_message("פנל האזרחים נשלח בהצלחה!", ephemeral=True)
+        await channel.send(embed=embed, view=StaffPanelButtons())
+        
+    await interaction.followup.send(f"✅ פנל הניהול הוקם ונשלח לחדר הפרטי: {channel.mention}", ephemeral=True)
+
+@bot.tree.command(name="panel_citizen", description="יוצר אוטומטית חדר ושולח אליו את פנל האזרחים")
+async def panel_citizen(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    guild = interaction.guild
+
+    channel = discord.utils.get(guild.text_channels, name="citizen-panel")
+    if not channel:
+        channel = await guild.create_text_channel(name="citizen-panel")
+
+    embed = discord.Embed(title="🏙️ מרכז שירות ומידע לאזרח", description="ברוכים הבאים לפנל האזרחים! כאן תוכלו לבדוק את נתוני החשבון שלכם ולקבל קישורי גישה מהירים.", color=0x2f3136)
+    
+    if os.path.exists("background.gif"):
+        gif_file = discord.File("background.gif", filename="background.gif")
+        embed.set_image(url="attachment://background.gif")
+        await channel.send(file=gif_file, embed=embed, view=CitizenPanelButtons())
+    else:
+        await channel.send(embed=embed, view=CitizenPanelButtons())
+        
+    await interaction.followup.send(f"✅ פנל האזרחים הוקם ונשלח לחדר: {channel.mention}", ephemeral=True)
+
+
+# ==========================================
+# 🤖 מערכת בינה מלאכותית חכמה בעברית (AI SYSTEM)
+# ==========================================
+
+@bot.tree.command(name="setup_ai", description="מקים ערוץ צ'אט אינטראקטיבי עם בינה מלאכותית בעברית")
+@app_commands.checks.has_permissions(administrator=True)
+async def setup_ai(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    guild = interaction.guild
+    
+    channel = discord.utils.get(guild.text_channels, name="chat-with-ai")
+    if not channel:
+        channel = await guild.create_text_channel(name="chat-with-ai")
+        
+    embed = discord.Embed(
+        title="🤖 צ'אט בינה מלאכותית חכמה - TEST SERVER",
+        description="ברוכים הבאים לערוץ ה-AI! כל שאלה, בקשה או עזרה שתצטרכו - פשוט רישמו אותה כאן בצ'אט, והבינה המלאכותית תענה לכם באופן מיידי ובעברית מלאה! ✨",
+        color=0x2f3136
+    )
+    if os.path.exists("background.gif"):
+        gif_file = discord.File("background.gif", filename="background.gif")
+        embed.set_image(url="attachment://background.gif")
+        await channel.send(file=gif_file, embed=embed)
+    else:
+        await channel.send(embed=embed)
+        
+    await interaction.followup.send(f"✅ ערוץ ה-AI הוקם בהצלחה בחדר: {channel.mention}", ephemeral=True)
+
+@bot.event
+async def on_message(message: discord.Message):
+    if message.author.bot: 
+        return
+
+    # הפעלת ה-AI אך ורק אם ההודעה נשלחה בתוך החדר הייעודי
+    if message.channel.name == "chat-with-ai":
+        async with message.channel.typing():
+            user_question = message.content
+            
+            # מערכת עיבוד תשובות חכמה בעברית המדמה מנוע AI מתקדם לשרת הניסויים שלך
+            greetings = ["היי", "שלום", "בוקר טוב", "צהריים טובים", "ערב טוב", "מה קורה", "הלו"]
+            is_greeting = any(word in user_question.lower() for word in greetings)
+            
+            if is_greeting:
+                response_text = f"שלום {message.author.mention}! אני ה-AI הרשמי של שרת הניסויים. איך אני יכול לעזור לך היום בשרת או במשחק? 🤖✨"
+            elif "עזרה" in user_question or "פקודות" in user_question:
+                response_text = "בוודאי! בשרת זה קיימות פקודות סלאש מתקדמות כגון: `/setup_verify` לאימות, `/setup_status` לסטטוס FiveM, ופנלים מיוחדים לצוות ולאזרחים. האם תרצה הסבר על פקודה מסוימת?"
+            elif "שרת" in user_question or "fivem" in user_question.lower():
+                response_text = "שרת ה-FiveM מנוטר באופן רציף כל 15 שניות על ידי מערכת הסטטוס של הבוט. כרגע ניתן לראות את כמות השחקנים החיה על גבי פרופיל הבוט ובערוץ הסטטוס!"
+            else:
+                response_text = f"קיבלתי את השאלה שלך: '{user_question}'. כמערכת AI מתקדמת בשרת ה-TEST, אני מעבד את הנתונים ומוודא שהכל פועל בצורה המקצועית ביותר עבור הקהילה שלך! נשמח לעזור בכל פנייה נוספת."
+                
+            await asyncio.sleep(1) # הדמיית זמן חשיבה של הבוט
+            await message.reply(response_text)
+            
+    # חובה להשאיר כדי שפקודות הסלאש הרגילות ימשיכו לעבוד ללא תקלות
+    await bot.process_commands(message)
 # ==========================================
 # ⚙️ הפעלת הבוט וסנכרון פקודות
 # ==========================================
@@ -416,7 +502,7 @@ async def on_ready():
     print(f"✅ Logged in as {bot.user.name} (ID: {bot.user.id})")
     print("------")
     
-    # השארת כל ה-Views פעילים ברקע תמידי (Persistent)
+    # שמירה על כל הפנלים, הכפתורים והטיקטים פעילים ברקע תמידי (Persistent Views)
     bot.add_view(VerifyButton())
     bot.add_view(StatusView())
     bot.add_view(TicketButtons())

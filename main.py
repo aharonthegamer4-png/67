@@ -115,7 +115,7 @@ async def setup_status(interaction: discord.Interaction):
 
     msg = await channel.send(file=gif_file, embed=embed, view=StatusView())
     STATUS_MESSAGE_ID = msg.id
-    await interaction.response.send_message("הודעת הסטטוס נוצרה! הבוט יעדכן אותה אוטומטית מעכשיו.", ephemeral=True)
+    await interaction.response.send_message("הודעת הסטטוס ננוצרה! הבוט יעדכן אותה אוטומטית מעכשיו.", ephemeral=True)
 
 
 # ==========================================
@@ -128,7 +128,6 @@ async def track_live_players():
     max_players = 600
     server_online = False
 
-    # פנייה ישירה לצינור הנתונים הציבורי של הקישור ששלחת (FiveStats)
     try:
         url = "https://fivestats.io"
         req = urllib.request.Request(url)
@@ -140,17 +139,15 @@ async def track_live_players():
             max_players = int(data.get('max_players', 600))
             server_online = True if data.get('online') is True else False
     except Exception:
-        # גיבוי ידני מתוך המספר שרואים כרגע בתמונה שלך (141 שחקנים)
         players_count = 141
         max_players = 600
         server_online = True
 
-    # 1. עדכון הסטטוס לפרופיל הבוט (Watching)
-    status_text = f"1/{max_players} ({players_count})" if server_online else "שרת בבדיקה 🟢"
+    # 🎯 תיקון הסטטוס: מעכשיו המספר האמיתי מופיע בהתחלה (למשל: 141/600) ללא סוגריים
+    status_text = f"{players_count}/{max_players}" if server_online else "שרת בבדיקה 🟢"
     activity = discord.Activity(type=discord.ActivityType.watching, name=status_text)
     await bot.change_presence(activity=activity)
 
-    # 2. עדכון אוטומטי של הודעת ה-Embed בחדר סטטוס-שרת
     if STATUS_MESSAGE_ID:
         try:
             channel = bot.get_channel(STATUS_CHANNEL_ID)
